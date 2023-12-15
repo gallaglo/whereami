@@ -47,6 +47,13 @@ spec:
           privileged: false
           readOnlyRootFilesystem: true
         image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
         ports:
           {{- if .Values.config.grpc.enabled }}
           - name: grpc

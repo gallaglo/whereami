@@ -105,6 +105,13 @@ spec:
       containers:
       - name: whereami
         image: us-docker.pkg.dev/google-samples/containers/gke/whereami:v1.2.21
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
         ports:
           - name: http
             containerPort: 8080 #The application is listening on port 8080
