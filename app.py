@@ -1,3 +1,17 @@
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from flask import Flask, request, Response, jsonify
 import logging
 from logging.config import dictConfig
@@ -51,8 +65,11 @@ dictConfig({
     }
 })
 
+# get host IP
+host_ip = os.getenv("HOST", "0.0.0.0") # in absence of env var, default to 0.0.0.0 (IPv4)
+
 # check to see if tracing enabled and sampling probability
-trace_sampling_ratio = 0  # default to not sampling if absense of environment var
+trace_sampling_ratio = 0  # default to not sampling if absence of environment var
 if os.getenv("TRACE_SAMPLING_RATIO"):
 
     try:
@@ -140,11 +157,11 @@ def grpc_serve():
             reflection.SERVICE_NAME, health.SERVICE_NAME)
 
     # Start an end point to expose metrics at host:$grpc_metrics_port/metrics
-    start_http_server(grpc_metrics_port)  # starts a flask server for metrics
+    start_http_server(port=grpc_metrics_port)  # starts a flask server for metrics
 
     # Add the reflection service to the server.
     reflection.enable_server_reflection(services, server)
-    server.add_insecure_port('[::]:' + str(grpc_serving_port))
+    server.add_insecure_port(host_ip + ':' + str(grpc_serving_port))
     server.start()
 
     # Mark all services as healthy.
@@ -187,5 +204,7 @@ if __name__ == '__main__':
 
     else:
         app.run(
-            host='0.0.0.0', port=int(os.environ.get('PORT', 8080)),
+            host=host_ip.strip('[]'), # stripping out the brackets if present
+            port=int(os.environ.get('PORT', 8080)),
+            debug=True,
             threaded=True)

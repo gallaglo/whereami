@@ -134,3 +134,8 @@ spec:
               configMapKeyRef:
                 name: {{ include "whereami.fullname" . }}
                 key: TRACE_SAMPLING_RATIO
+          - name: HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "whereami.fullname" . }}
+                key: HOST

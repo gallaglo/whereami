@@ -28,5 +28,6 @@ data:
   ECHO_HEADERS:    "False" # flag to enable the payload including all headers received in the `echo_headers` field if set to "True"
   GRPC_ENABLED:    "False" # flag to switch whereami service to gRPC mode
   TRACE_SAMPLING_RATIO: "0.00" # trace sampling ratio; i.e. the % likelyhood a trace will be sent to Cloud Trace; setting to zero disables tracing; expects float. "0.10" == 10%
+  HOST: "0.0.0.0" # host to listen on - setting this to "[::]" will support IPv6
 # [END gke_k8s_configmap_configmap_whereami_configmap]
 ---

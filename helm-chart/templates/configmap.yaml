@@ -27,3 +27,4 @@ data:
   ECHO_HEADERS: {{ if .Values.config.echoHeaders.enabled }}"True"{{ else }}"False"{{ end }}
   GRPC_ENABLED: {{ if .Values.config.grpc.enabled }}"True"{{ else }}"False"{{ end }}
   TRACE_SAMPLING_RATIO: {{ .Values.config.traceSamplingRatio | quote }}
+  HOST: {{ .Values.config.host | quote }}
