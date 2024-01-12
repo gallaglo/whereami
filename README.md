@@ -50,11 +50,11 @@ Some of the returned metadata includes:
 
 ### Full deployment walk through
 
-`whereami` can return even more information about your application and its environment, if you provide access to that information. This walkthrough will demonstrate the deployment of a GKE cluster and the metadata `whereami` is capable of exposing. Clone this repo to have local access to the deployment files used in step 2.
+`whereami` can return even more information about your application and its environment, if you provide access to that information. This walkthrough will demonstrate the deployment of a GKE Autopilot cluster and the metadata `whereami` is capable of exposing. Clone this repo to have local access to the deployment files used in step 2.
 
 ```bash
 $ git clone https://github.com/GoogleCloudPlatform/kubernetes-engine-samples
-$ cd kubernetes-engine-samples/whereami
+$ cd kubernetes-engine-samples/quickstarts/whereami
 ```
 
 #### Step 1 - Create a GKE cluster
@@ -67,20 +67,15 @@ $ export COMPUTE_REGION=#YOUR_COMPUTE_REGION# # this expects a region, not a zon
 $ export CLUSTER_NAME=whereami
 ```
 
-Now create your cluster:
+Now create your [GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview) cluster:
 
 ```bash
-$ gcloud beta container clusters create $CLUSTER_NAME \
-  --enable-ip-alias \
-  --enable-stackdriver-kubernetes \
-  --region=$COMPUTE_REGION \
-  --num-nodes=1 \
-  --release-channel=regular
-
-$ gcloud container clusters get-credentials $CLUSTER_NAME --region $COMPUTE_REGION
+$ gcloud --project ${PROJECT_ID} container clusters \
+  create-auto ${CLUSTER_NAME} --region ${COMPUTE_REGION} \
+  --release-channel regular
 ```
 
-This will create a regional cluster with a single node per zone (3 nodes in total).
+This will create a regional GKE Autopilot cluster in the specified region.
 
 #### Step 2 - Deploy whereami
 
@@ -162,6 +157,11 @@ spec:
               configMapKeyRef:
                 name: whereami
                 key: METADATA
+          - name: HOST
+            valueFrom:
+              configMapKeyRef:
+                name: whereami
+                key: HOST
 ```
 
 The k8s deployment repo uses Kustomize to organize its deployment files. The following command will deploy the all of the required resources for the full `whereami` deployment.
@@ -197,17 +197,19 @@ Wrap things up by `curl`ing the `EXTERNAL-IP` of the service.
 $ curl $ENDPOINT
 
 {
-  "cluster_name": "cfs-limit-test-01", 
-  "host_header": "35.232.28.77", 
-  "metadata": "frontend", 
-  "node_name": "gke-cfs-limit-test-01-default-pool-7b7ebe33-lj4q.c.alexmattson-scratch.internal", 
-  "pod_ip": "10.32.2.23", 
-  "pod_name": "whereami-6f5545f49c-nkjdg", 
-  "pod_name_emoji": "👊", 
-  "pod_namespace": "default", 
-  "pod_service_account": "whereami", 
-  "project_id": "alexmattson-scratch", 
-  "timestamp": "2020-12-13T05:44:47", 
+  "cluster_name": "whereami",
+  "gce_instance_id": "2078855064500138887",
+  "gce_service_account": "e2m-private-test-01.svc.id.goog",
+  "host_header": "34.31.47.190",
+  "metadata": "frontend",
+  "node_name": "gk3-whereami-pool-2-ba8fb854-gtcq",
+  "pod_ip": "10.5.128.86",
+  "pod_name": "whereami-78c4df65c8-jwsq9",
+  "pod_name_emoji": "🔠",
+  "pod_namespace": "default",
+  "pod_service_account": "whereami",
+  "project_id": "e2m-private-test-01",
+  "timestamp": "2024-01-12T05:30:52",
   "zone": "us-central1-c"
 }
 ```
