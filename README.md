@@ -75,7 +75,7 @@ $ gcloud --project ${PROJECT_ID} container clusters \
   --release-channel regular
 ```
 
-This will create a regional GKE Autopilot cluster in the specified region.
+This will create a GKE Autopilot cluster in the specified region.
 
 #### Step 2 - Deploy whereami
 
