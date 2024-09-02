@@ -1,25 +1,19 @@
-FROM python:3.12.1-slim
+FROM python:3.11-slim
 
-#MAINTAINER Alex Mattson "alex.mattson@gmail.com"
+# Allow statements and log messages to immediately appear in the logs
+ENV PYTHONUNBUFFERED True
+ENV PORT 8080
+# Copy local code to the container image.
+ENV APP_HOME /app
+WORKDIR $APP_HOME
+COPY . ./
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  wget && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/* && \
-  wget -O /bin/curl https://github.com/moparisthebest/static-curl/releases/download/v8.2.1/curl-amd64 && \ 
-  chmod +x /bin/curl
-COPY ./requirements.txt /app/requirements.txt
+# Install production dependencies.
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /app
-
-RUN pip install -r requirements.txt
-
-COPY . /app
-
-#RUN addgroup -S appuser && adduser -S -G appuser appuser # commented out when switching to `slim` from `alpine`
-RUN addgroup --system appuser && adduser --system appuser --ingroup appuser
-USER appuser
-
-ENTRYPOINT [ "python" ]
-
-CMD [ "app.py" ]
+# Run the web service on container startup. Here we use the gunicorn
+# webserver, with one worker process and 8 threads.
+# For environments with multiple CPU cores, increase the number of workers
+# to be equal to the cores available.
+# Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
