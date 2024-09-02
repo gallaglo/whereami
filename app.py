@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify
 import logging
 from logging.config import dictConfig
 import sys
@@ -193,7 +193,7 @@ def home(path):
 
         return payload[requested_value]
 
-    return jsonify(payload)
+    return render_template('index.html', json_data=jsonify(payload).get_json())
 
 if __name__ == '__main__':
 
