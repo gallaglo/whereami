@@ -14,7 +14,7 @@
 
 from flask import Flask, render_template, request, Response, jsonify
 import vertexai
-from vertexai.generative_models import ImageGenerationModel
+from vertexai.preview.vision_models import ImageGenerationModel
 import time
 import os
 import logging
@@ -185,6 +185,7 @@ def grpc_serve():
 
 vertexai.init(project=os.environ["PROJECT_ID"], location="us-central1")
 generation_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
+#generation_model = ImageGenerationModel.from_pretrained("imagengeneration@006")
 
 def _get_region(zone: str) -> str:
     '''
