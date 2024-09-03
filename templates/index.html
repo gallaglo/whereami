@@ -1,13 +1,35 @@
-{% extends 'base.html' %}
-{% from 'bootstrap5/form.html' import render_form, render_field, render_form_row %}
-
-{% block content %}
-<h1>whereami</h1>
-<p>{{ message }}</p>
-<form method="POST">
-        <input type="text" name="Image Prompt" value="{{ default_prompt }}" required><br>
-        
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>whereami</title>
+    <style>
+        pre {
+            background: #ddd;
+            padding: 10px;
+        }
+        h2 {
+            margin-top: 20px;
+        }
+        footer {
+            margin: 20px;
+        }
+        .large-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>whereami</h1>
+    <p>{{ message }}</p>
+    <form method="POST">
+        <input type="text" name="Image Prompt" value="{{ default_prompt }}" required class="large-input"><br>
         <input type="submit" value="Generate Image">
-</form>
-
-{% endblock %}
+    </form>
+</body>
+</html>

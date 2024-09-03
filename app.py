@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from flask import Flask, render_template, request, Response, jsonify
-from flask_bootstrap import Bootstrap5
+from google.cloud import aiplatform
+import time
+import os
 import logging
 from logging.config import dictConfig
 import json
 import sys
-import os
 from flask_cors import CORS
 import whereami_payload
 # gRPC stuff
@@ -116,12 +117,12 @@ app.config['JSON_AS_ASCII'] = False  # otherwise our emojis get hosed
 CORS(app)  # enable CORS
 metrics = PrometheusMetrics(app)  # enable Prom metrics
 
-# Flask-Bootstrap setup
-# set default button sytle and size, will be overwritten by macro parameters
-app.config["BOOTSTRAP_BTN_STYLE"] = "primary"
-app.config["BOOTSTRAP_BTN_SIZE"] = "sm"
+# # Flask-Bootstrap setup
+# # set default button sytle and size, will be overwritten by macro parameters
+# app.config["BOOTSTRAP_BTN_STYLE"] = "primary"
+# app.config["BOOTSTRAP_BTN_SIZE"] = "sm"
 
-bootstrap = Bootstrap5(app)
+# bootstrap = Bootstrap5(app)
 
 # gRPC setup
 grpc_serving_port = int(os.environ.get('PORT', 9090)) # configurable via `PORT` but default to 9090
@@ -180,6 +181,8 @@ def grpc_serve():
 
     # Park the main application thread.
     server.wait_for_termination()
+
+generation_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
 
 def _get_region(zone: str) -> str:
     '''
@@ -243,7 +246,7 @@ def home():
 
     location = _get_location_from_json_list('/app/regions.json', region)
 
-    default_prompt = f"Generate an image of {location} in a watercolor style."
+    default_prompt = f"Generate an image of {location}."
 
     return render_template('index.html', message=f"Hello from {region}!", default_prompt=default_prompt)
 
