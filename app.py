@@ -223,7 +223,12 @@ def home():
 
     payload = whereami_payload.build_payload(request.headers)
 
-    region = _get_region(payload['zone'])
+    # retrieve and transform zone to region for GCE and GKE workloads
+    # or retrieve region directly if running on Cloud Run
+    if 'zone' in payload:
+        region = _get_region(payload['zone'])
+    else:
+        region = payload['region']
 
     location = _get_location_from_json_list('/app/regions.json', region)
 

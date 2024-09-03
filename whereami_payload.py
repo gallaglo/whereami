@@ -136,9 +136,16 @@ class WhereamiPayload(object):
         if len(self.gce_metadata):
             logging.info("Found cached GCE metadata.")
 
-            # get project / zone info
+            # get project
             self.payload['project_id'] = self.gce_metadata['project']['projectId']
-            self.payload['zone'] = self.gce_metadata['instance']['zone'].split('/')[-1]
+
+            # if we're running in Cloud Run, we can retrieve the service name and region
+            # else, we can get the zone
+            if os.getenv('K_SERVICE'):
+                self.payload['service_name'] = os.getenv('K_SERVICE')
+                self.payload['region'] = self.gce_metadata['instance']['region']
+            else:
+                self.payload['zone'] = self.gce_metadata['instance']['zone'].split('/')[-1]
 
             # if we're running in GKE, we can also get cluster name
             try:
