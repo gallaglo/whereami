@@ -225,10 +225,13 @@ def home():
 
     # retrieve and transform zone to region for GCE and GKE workloads
     # or retrieve region directly if running on Cloud Run
-    if 'zone' in payload:
+    if 'region' in payload:
+        region = payload['region']
+    elif 'zone' in payload:
         region = _get_region(payload['zone'])
     else:
-        region = payload['region']
+        logging.warning("Region cannot be located.")
+        region = None
 
     location = _get_location_from_json_list('/app/regions.json', region)
 
