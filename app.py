@@ -15,6 +15,9 @@
 from flask import Flask, render_template, request, Response, jsonify
 import logging
 from logging.config import dictConfig
+import vertexai
+from vertexai.generative_models import GenerativeModel, GenerationConfig
+import markdown  # to format LLM output for web display
 import json
 import sys
 import os
@@ -173,6 +176,18 @@ def grpc_serve():
     # Park the main application thread.
     server.wait_for_termination()
 
+# set up connection to Vertex AI
+vertexai.init(project=os.environ["PROJECT_ID"], location="us-central1")
+
+model = GenerativeModel("gemini-pro")
+
+generation_config = GenerationConfig(
+    temperature=0.3,
+    top_p=0.6,
+    candidate_count=1,
+    max_output_tokens=4096,
+)
+
 def _get_region(zone: str) -> str:
     '''
     return GCP cloud region from zone
@@ -203,7 +218,7 @@ def i_am_healthy():
 
 
 # API endpoint
-@app.route('/api/', defaults={'path': ''})
+@app.route('/api', defaults={'path': ''})
 @app.route('/api/<path:path>')
 def api(path):
 
@@ -235,7 +250,19 @@ def home():
 
     location = _get_location_from_json_list('/app/regions.json', region)
 
-    return render_template('index.html', message=f"Hello from {region}!", location=location)
+    message = f"Hello from {region} in {locaction}!"
+
+    prompt = f"What is an interesting fact about {location}?"
+
+    # if user submits a prompt, generate a response from Gemini model
+    if request.method == 'POST':
+        prompt = request.form['prompt']
+        response = model.generate_content(prompt, generation_config=generation_config)
+        response_text = response.text.replace("•", "  *")
+        markdown_response = markdown.markdown(response_text)
+        return render_template('results.html', response=markdown_response)
+
+    return render_template('index.html', message=message, prompt=prompt)
 
 if __name__ == '__main__':
 
