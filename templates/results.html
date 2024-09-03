@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% from 'bootstrap5/pagination.html' import render_pager, render_pagination %}
+
+{% block content %}
+<h1>whereami</h1>
+
+<p><a href="/">Generate Another Image</a></p>
+
+<h4>Generated Image</h4>
+<img src="{{ image_path }}" alt="Generated Image"><br>
+
+{% endblock %}

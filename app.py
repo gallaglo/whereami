@@ -218,7 +218,7 @@ def api(path):
     return jsonify(payload)
 
 # default route to webpage
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
 
     payload = whereami_payload.build_payload(request.headers)
@@ -235,7 +235,9 @@ def home():
 
     location = _get_location_from_json_list('/app/regions.json', region)
 
-    return render_template('index.html', message=f"Hello from {region}!", location=location)
+    default_prompt = f"Generate an image of {location} in a watercolor style."
+
+    return render_template('index.html', message=f"Hello from {region}!", default_prompt=default_prompt)
 
 if __name__ == '__main__':
 

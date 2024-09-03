@@ -1,10 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>whereami</title>
-</head>
-<body>
-    <h1>{{ message }}</h1>
-    <p>{{ location }}</p>
-</body>
-</html>
+{% extends 'base.html' %}
+{% from 'bootstrap5/form.html' import render_form, render_field, render_form_row %}
+
+{% block content %}
+<h1>whereami</h1>
+<p>{{ message }}</p>
+<form method="POST">
+        <input type="text" name="Image Prompt" value="{{ default_prompt }}" required><br>
+        
+        <input type="submit" value="Generate Image">
+</form>
+
+{% endblock %}
