@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from flask import Flask, render_template, request, Response, jsonify
+from flask_bootstrap import Bootstrap5
 import logging
 from logging.config import dictConfig
 import json
@@ -114,6 +115,13 @@ RequestsInstrumentor().instrument()  # enable tracing for Requests
 app.config['JSON_AS_ASCII'] = False  # otherwise our emojis get hosed
 CORS(app)  # enable CORS
 metrics = PrometheusMetrics(app)  # enable Prom metrics
+
+# Flask-Bootstrap setup
+# set default button sytle and size, will be overwritten by macro parameters
+app.config["BOOTSTRAP_BTN_STYLE"] = "primary"
+app.config["BOOTSTRAP_BTN_SIZE"] = "sm"
+
+bootstrap = Bootstrap5(app)
 
 # gRPC setup
 grpc_serving_port = int(os.environ.get('PORT', 9090)) # configurable via `PORT` but default to 9090
