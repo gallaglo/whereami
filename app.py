@@ -218,7 +218,7 @@ def i_am_healthy():
 
 
 # API endpoint
-@app.route('/api', defaults={'path': ''})
+@app.route('/api/', defaults={'path': ''})
 @app.route('/api/<path:path>')
 def api(path):
 
@@ -233,7 +233,7 @@ def api(path):
     return jsonify(payload)
 
 # default route to webpage
-@app.route('/')
+@app.route("/", methods=["GET", "POST"])
 def home():
 
     payload = whereami_payload.build_payload(request.headers)
@@ -250,7 +250,7 @@ def home():
 
     location = _get_location_from_json_list('/app/regions.json', region)
 
-    message = f"Hello from {region} in {locaction}!"
+    message = f"Hello from {region} in {location}!"
 
     prompt = f"What is an interesting fact about {location}?"
 
@@ -260,9 +260,9 @@ def home():
         response = model.generate_content(prompt, generation_config=generation_config)
         response_text = response.text.replace("•", "  *")
         markdown_response = markdown.markdown(response_text)
-        return render_template('results.html', response=markdown_response)
+        return render_template('results.html', response_text=markdown_response)
 
-    return render_template('index.html', message=message, prompt=prompt)
+    return render_template('index.html', message=message, default_prompt=prompt)
 
 if __name__ == '__main__':
 
