@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from flask import Flask, render_template, request, Response, jsonify
-from google.cloud import aiplatform
+import vertexai
+from vertexai.generative_models import ImageGenerationModel
 import time
 import os
 import logging
@@ -182,6 +183,7 @@ def grpc_serve():
     # Park the main application thread.
     server.wait_for_termination()
 
+vertexai.init(project=os.environ["PROJECT_ID"], location="us-central1")
 generation_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
 
 def _get_region(zone: str) -> str:
@@ -204,7 +206,20 @@ def _get_location_from_json_list(file_path: str, region: str) -> str:
         if item.get('name') == region:
             return item.get('location')
     
-    return None 
+    return None
+
+def _generate_image(prompt):
+
+    image_filename = f"{str(uuid.uuid4())}.png"
+    image_path = f"/static/{image_temp_filename}"
+
+    response = generation_model.generate_images(
+        prompt=prompt,
+        number_of_images=1,
+        #output_gcs_uri=f"gs://{os.environ["GCS_BUCKET_NAME"]}/{image_name}",
+    )
+    response[0].save(location=image_path)
+    return image_path
 
 # HTTP heathcheck
 @app.route('/healthz')  # healthcheck endpoint
@@ -248,7 +263,17 @@ def home():
 
     default_prompt = f"Generate an image of {location}."
 
+    if request.method == 'POST':
+        prompt = request.form['prompt']
+        return render_template('loading.html', prompt=prompt)
+
     return render_template('index.html', message=f"Hello from {region}!", default_prompt=default_prompt)
+
+@app.route('/generate', methods=['POST'])
+def generate():
+    prompt = request.form['prompt']
+    image_path = _generate_image(prompt)
+    return jsonify({'image_path': image_path})
 
 if __name__ == '__main__':
 

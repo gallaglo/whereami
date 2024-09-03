@@ -5,6 +5,7 @@ flask-cors
 grpcio
 grpcio-reflection
 grpcio-health-checking
+google-cloud-aiplatform==1.52.0
 prometheus-flask-exporter
 py-grpc-prometheus
 opentelemetry-api
