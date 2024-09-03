@@ -136,9 +136,20 @@ class WhereamiPayload(object):
         if len(self.gce_metadata):
             logging.info("Found cached GCE metadata.")
 
-            # get project / zone info
+            # get project
             self.payload['project_id'] = self.gce_metadata['project']['projectId']
-            self.payload['zone'] = self.gce_metadata['instance']['zone'].split('/')[-1]
+
+            # if we're running in Cloud Run, we can retrieve the region
+            # else, we can get the zone
+            try:
+                self.payload['region'] = self.gce_metadata['instance']['region'].split('/')[-1]
+            except:
+                logging.warning("Unable to capture GCP region.")
+            
+            try:
+                self.payload['zone'] = self.gce_metadata['instance']['zone'].split('/')[-1]
+            except:
+                logging.warning("Unable to capure GCP zone.")
 
             # if we're running in GKE, we can also get cluster name
             try:
@@ -192,6 +203,17 @@ class WhereamiPayload(object):
                 'POD_SERVICE_ACCOUNT')
         else:
             logging.warning("Unable to capture pod KSA.")
+
+        # get Cloud Run service name and revision if available
+        if os.getenv('K_SERVICE'):
+            self.payload['service_name'] = os.getenv('K_SERVICE')
+        else:
+            logging.warning("Unable to capture Cloud Run service name.")
+
+        if os.getenv('K_REVISION'):
+            self.payload['service_revision'] = os.getenv('K_REVISION')
+        else:
+            logging.warning("Unable to get Cloud Run revision being run.")
 
         # get the whereami METADATA envvar
         if os.getenv('METADATA'):

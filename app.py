@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify
 import logging
 from logging.config import dictConfig
+import json
 import sys
 import os
 from flask_cors import CORS
@@ -172,6 +173,27 @@ def grpc_serve():
     # Park the main application thread.
     server.wait_for_termination()
 
+def _get_region(zone: str) -> str:
+    '''
+    return GCP cloud region from zone
+    '''
+    # split zone id on '-' delimeter and rejoin first two elements to derive region
+    # e.g. us-west1-c becomes us-west1
+    elements = zone.split('-')
+    return '-'.join(elements[:2])
+
+def _get_location_from_json_list(file_path: str, region: str) -> str:
+    '''
+    return GCP cloud region location based on region ID
+    '''
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    
+    for item in data['regions']:
+        if item.get('name') == region:
+            return item.get('location')
+    
+    return None 
 
 # HTTP heathcheck
 @app.route('/healthz')  # healthcheck endpoint
@@ -180,10 +202,10 @@ def i_am_healthy():
     return ('OK')
 
 
-# default HTTP service
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def home(path):
+# API endpoint
+@app.route('/api/', defaults={'path': ''})
+@app.route('/api/<path:path>')
+def api(path):
 
     payload = whereami_payload.build_payload(request.headers)
 
@@ -194,6 +216,26 @@ def home(path):
         return payload[requested_value]
 
     return jsonify(payload)
+
+# default route to webpage
+@app.route('/')
+def home():
+
+    payload = whereami_payload.build_payload(request.headers)
+
+    # retrieve and transform zone to region for GCE and GKE workloads
+    # or retrieve region directly if running on Cloud Run
+    if 'region' in payload:
+        region = payload['region']
+    elif 'zone' in payload:
+        region = _get_region(payload['zone'])
+    else:
+        logging.warning("Region cannot be located.")
+        region = None
+
+    location = _get_location_from_json_list('/app/regions.json', region)
+
+    return render_template('index.html', message=f"Hello from {region}!", location=location)
 
 if __name__ == '__main__':
 
