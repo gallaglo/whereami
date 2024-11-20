@@ -4,32 +4,86 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>whereami</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
-        pre {
-            background: #ddd;
+        body {
+            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .title {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .message {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
             padding: 10px;
+            margin-bottom: 20px;
+            font-style: italic;
         }
-        h2 {
-            margin-top: 20px;
-        }
-        footer {
-            margin: 20px;
+        .input-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .large-input {
             width: 100%;
-            max-width: 450px;
-            padding: 10px;
+            padding: 12px;
+            border: 2px solid #3498db;
+            border-radius: 6px;
             font-size: 16px;
-            margin-bottom: 10px;
+            transition: border-color 0.3s ease;
+        }
+        .large-input:focus {
+            outline: none;
+            border-color: #2980b9;
+        }
+        .submit-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .submit-btn:hover {
+            background-color: #2980b9;
         }
     </style>
 </head>
-<body>
-    <h1>whereami</h1>
-    <p>{{ message }}</p>
-    <form method="POST">
-        <input type="text" name="prompt" value="{{ default_prompt }}" required class="large-input"><br>
-        <input type="submit" value="Submit">
-    </form>
+<body class="bg-gray-100">
+    <div class="container">
+        <h1 class="text-3xl font-bold title">whereami</h1>
+        
+        {% if message %}
+        <div class="message">
+            {{ message }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" class="input-form">
+            <input 
+                type="text" 
+                name="prompt" 
+                value="{{ default_prompt }}" 
+                required 
+                class="large-input mb-4"
+                placeholder="Enter your query"
+            >
+            <button type="submit" class="submit-btn">
+                Submit
+            </button>
+        </form>
+    </div>
 </body>
 </html>
