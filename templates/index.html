@@ -6,82 +6,123 @@
     <title>whereami</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
         body {
-            background-color: #f4f4f4;
-            font-family: 'Arial', sans-serif;
+            background-color: #2b2b2b;
+            font-family: 'Courier New', monospace;
+            color: #f8f8f8;
         }
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 50px auto;
-            background-color: white;
+            background-color: #1e1e1e;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid #3a3a3a;
         }
         .title {
-            color: #2c3e50;
-            text-align: center;
+            color: #00ff00;
+            text-align: left;
             margin-bottom: 20px;
+            font-weight: normal;
+            border-bottom: 1px solid #3a3a3a;
+            padding-bottom: 10px;
+        }
+        .title::before {
+            content: "$ ";
+            color: #00ff00;
         }
         .message {
-            background-color: #f8f9fa;
-            border-left: 4px solid #3498db;
+            background-color: #2a2a2a;
+            border-left: 4px solid #00ff00;
             padding: 10px;
             margin-bottom: 20px;
-            font-style: italic;
+            font-style: normal;
+            color: #00ff00;
         }
         .input-form {
             display: flex;
             flex-direction: column;
+        }
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
             align-items: center;
+            background-color: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            padding: 12px;
         }
         .large-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #3498db;
-            border-radius: 6px;
+            flex: 1;
+            background-color: transparent;
+            border: none;
             font-size: 16px;
-            transition: border-color 0.3s ease;
+            color: #00ff00;
+            margin-left: 8px;
+            caret-color: transparent;
         }
         .large-input:focus {
             outline: none;
-            border-color: #2980b9;
+        }
+        .prompt-symbol {
+            color: #00ff00;
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #00ff00;
+            animation: blink 1s infinite;
+            margin-left: 4px;
         }
         .submit-btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
+            background-color: #2a2a2a;
+            color: #00ff00;
+            border: 1px solid #3a3a3a;
             padding: 12px 24px;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            margin-top: 16px;
+            font-family: 'Courier New', monospace;
         }
         .submit-btn:hover {
-            background-color: #2980b9;
+            background-color: #3a3a3a;
+            border-color: #4a4a4a;
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
     <div class="container">
-        <h1 class="text-3xl font-bold title">whereami</h1>
+        <h1 class="text-2xl title">whereami</h1>
         
         {% if message %}
         <div class="message">
-            {{ message }}
+            <span class="text-green-400">></span> {{ message }}
         </div>
         {% endif %}
         
         <form method="POST" class="input-form">
-            <input 
-                type="text" 
-                name="prompt" 
-                value="{{ default_prompt }}" 
-                required 
-                class="large-input mb-4"
-                placeholder="Enter your query"
-            >
+            <div class="input-wrapper">
+                <span class="prompt-symbol">></span>
+                <input 
+                    type="text" 
+                    name="prompt" 
+                    value="{{ default_prompt }}"
+                    required 
+                    class="large-input"
+                    placeholder="Enter your query"
+                >
+                <div class="cursor"></div>
+            </div>
             <button type="submit" class="submit-btn">
-                Submit
+                Execute
             </button>
         </form>
     </div>

@@ -3,60 +3,125 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>whereami - Fact Generator</title>
+    <title>whereami(1) - fact generator</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #f4f6f9;
-            font-family: 'Arial', sans-serif;
+            background-color: #1e1e1e;
+            font-family: 'Courier New', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            color: #00ff00;
+            line-height: 1.5;
         }
+
         .fact-container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            max-width: 700px;
-            padding: 40px;
-            text-align: center;
-            transition: transform 0.3s ease;
+            background-color: #2b2b2b;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 30px;
+            text-align: left;
         }
-        .fact-container:hover {
-            transform: scale(1.02);
+
+        .man-header {
+            border-bottom: 1px solid #3a3a3a;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
         }
+
+        .man-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .man-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
         .fact-text {
-            color: #2c3e50;
-            font-size: 1.5rem;
+            color: #00ff00;
+            font-size: 1rem;
             line-height: 1.6;
             margin-bottom: 30px;
+            white-space: pre-wrap;
         }
+
         .generate-btn {
             display: inline-block;
-            background-color: #3498db;
-            color: white;
+            background-color: #2a2a2a;
+            color: #00ff00;
             text-decoration: none;
             padding: 12px 24px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
         }
+
         .generate-btn:hover {
-            background-color: #2980b9;
-            transform: translateY(-3px);
+            background-color: #3a3a3a;
+            border-color: #4a4a4a;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #00ff00;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
     </style>
 </head>
 <body>
     <div class="fact-container">
-        <div class="fact-text">
-            {{ response_text|safe }}
+        <div class="man-header">
+            <div class="man-title">WHEREAMI(1)                     User Commands                     WHEREAMI(1)</div>
         </div>
-        <a href="/" class="generate-btn">
-            Generate Another Fact
-        </a>
+
+        <div class="man-section">
+            <div class="section-title">NAME</div>
+            whereami - fact generation utility
+        </div>
+
+        <div class="man-section">
+            <div class="section-title">OUTPUT</div>
+            <div class="fact-text">
+                {{ response_text|safe }}<span class="cursor"></span>
+            </div>
+        </div>
+
+        <div class="man-section">
+            <div class="section-title">OPTIONS</div>
+            <a href="/" class="generate-btn">
+                --generate-new
+            </a>
+        </div>
+
+        <div class="man-section">
+            <div class="section-title">SEE ALSO</div>
+            facts(1), generate(1), ai(1)
+        </div>
     </div>
 </body>
 </html>
