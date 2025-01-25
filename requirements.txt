@@ -2,7 +2,6 @@ Flask==3.0.3
 gunicorn==22.0.0
 Werkzeug==3.0.3
 markdown==3.5.1
-google-cloud-aiplatform==1.52.0
 requests
 emoji==2.12.1
 flask-cors
@@ -19,3 +18,4 @@ opentelemetry-exporter-gcp-trace
 opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-requests
 six
+google-genai>=0.3.2

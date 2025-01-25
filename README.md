@@ -61,7 +61,8 @@ gcloud run deploy whereami \
   --region ${REGION} \
   --project ${PROJECT_ID} \
   --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
-  --allow-unauthenticated
+  --allow-unauthenticated \
+  --set-env-vars PROJECT_ID=${PROJECT_ID}
   ```
 
 ### Deploy to GKE

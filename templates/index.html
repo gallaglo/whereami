@@ -27,7 +27,7 @@
 <body>
     <h1>whereami</h1>
     <p>{{ message }}</p>
-    <form id="promptForm" method="POST">
+    <form id="promptForm">
         <input type="text" name="prompt" value="{{ default_prompt }}" required class="large-input"><br>
         <input type="submit" value="Submit">
     </form>
@@ -40,7 +40,8 @@
             const response = document.getElementById('response');
             response.innerHTML = '';
             
-            const source = new EventSource('/?prompt=' + encodeURIComponent(form.prompt.value));
+            const formData = new FormData(form);
+            const source = new EventSource('/?prompt=' + encodeURIComponent(formData.get('prompt')));
             
             source.onmessage = (event) => {
                 const data = JSON.parse(event.data);

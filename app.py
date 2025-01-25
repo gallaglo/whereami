@@ -119,6 +119,19 @@ client = genai.Client(
     location="us-central1"
 )
 
+generate_content_config = types.GenerateContentConfig(
+    temperature=0.3,
+    top_p=0.6,
+    max_output_tokens=8192,
+    response_modalities=["TEXT"],
+    safety_settings=[
+        types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+        types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+        types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+        types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+    ]
+)
+
 def _get_region(zone: str) -> str:
     elements = zone.split('-')
     return '-'.join(elements[:2])
@@ -132,36 +145,26 @@ def _get_location_from_json_list(file_path: str, region: str) -> str:
     return None
 
 def stream_response(prompt):
-    contents = [
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(prompt)]
+    logging.info(f"Starting stream_response with prompt: {prompt}")
+    try:
+        contents = [types.Content(role="user", parts=[types.Part.from_text(prompt)])]
+        responses = client.models.generate_content_stream(
+            model="gemini-2.0-flash-exp",
+            contents=contents,
+            config=generate_content_config
         )
-    ]
-    
-    generate_content_config = types.GenerateContentConfig(
-        temperature=0.3,
-        top_p=0.6,
-        max_output_tokens=8192,
-        response_modalities=["TEXT"],
-        safety_settings=[
-            types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
-            types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
-            types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
-            types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
-        ]
-    )
-
-    responses = client.models.generate_content_stream(
-        model="gemini-2.0-flash-exp",
-        contents=contents,
-        config=generate_content_config
-    )
-    
-    for response in responses:
-        chunk = str(response).replace("•", "  *")
-        chunk = markdown.markdown(chunk)
-        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        
+        full_response = ""
+        for response in responses:
+            text = response.candidates[0].content.parts[0].text
+            full_response += text
+            
+        formatted_text = markdown.markdown(full_response.replace("•", "*"))
+        yield f"data: {json.dumps({'chunk': formatted_text})}\n\n"
+            
+    except Exception as e:
+        logging.error(f"Error in stream_response: {str(e)}", exc_info=True)
+        yield f"data: {json.dumps({'chunk': f'Error: {str(e)}'})}\n\n"
 
 @app.route('/healthz')
 @metrics.do_not_track()
@@ -177,10 +180,17 @@ def api(path):
         return payload[requested_value]
     return jsonify(payload)
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/generate")
+def generate():
+    prompt = request.args.get('prompt')
+    if not prompt:
+        return jsonify({'error': 'No prompt provided'}), 400
+    return Response(stream_response(prompt), mimetype='text/event-stream')
+
+@app.route("/", methods=["GET"])
 def home():
-    if request.method == 'POST':
-        prompt = request.form['prompt']
+    prompt = request.args.get('prompt')
+    if prompt:
         return Response(stream_response(prompt), mimetype='text/event-stream')
         
     payload = whereami_payload.build_payload(request.headers)
