@@ -66,6 +66,9 @@ gcloud run deploy whereami \
   ```
 
 ### Deploy to GKE
+
+> GKE cluster must have [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity) enabled for the whereami app to call the Gemini API.
+
 ```bash
 # Set cluster details
 export CLUSTER_NAME=<your-cluster>
