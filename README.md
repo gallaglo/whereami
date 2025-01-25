@@ -27,12 +27,25 @@ docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest
 
 Deploy to Cloud Run:
 ```bash
+export SA_NAME=whereami-sa
+
+# Create service account
+gcloud iam service-accounts create ${SA_NAME} \
+  --display-name="Whereami Service Account"
+
+# Grant AI Platform User role
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
 gcloud run deploy whereami \
   --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest \
   --platform managed \
   --region ${REGION} \
   --project ${PROJECT_ID} \
-  --allow-unauthenticated ```
+  --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
+  --allow-unauthenticated
+  ```
 
 ## Repository Structure
 
