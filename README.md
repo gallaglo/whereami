@@ -15,7 +15,7 @@ Key features:
 - [Docker](https://docs.docker.com/get-docker/)
 - Active Google Cloud Project
 
-## Setup Instruction
+## Setup Instructions
 
 Deploy the app on either Cloud Run (serverless) or GKE (Kubernetes). Instructions for both platforms are provided below.
 
@@ -39,7 +39,7 @@ gcloud auth configure-docker ${REGION}-docker.pkg.dev
 docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest .
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest
 ```
-### GCP IAM Service Account
+### Create GCP IAM Service Account
 ```bash
 export SA_NAME=whereami-sa
 
