@@ -27,9 +27,35 @@
 <body>
     <h1>whereami</h1>
     <p>{{ message }}</p>
-    <form method="POST">
+    <form id="promptForm" method="POST">
         <input type="text" name="prompt" value="{{ default_prompt }}" required class="large-input"><br>
         <input type="submit" value="Submit">
     </form>
+    <div id="response"></div>
+
+    <script>
+        const form = document.getElementById('promptForm');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const response = document.getElementById('response');
+            response.innerHTML = '';
+            
+            const source = new EventSource('/?prompt=' + encodeURIComponent(form.prompt.value));
+            
+            source.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                response.innerHTML += data.chunk;
+            };
+            
+            source.onerror = () => {
+                source.close();
+                const generateAnother = document.createElement('a');
+                generateAnother.href = '/';
+                generateAnother.textContent = 'Generate Another Fact';
+                response.appendChild(document.createElement('br'));
+                response.appendChild(generateAnother);
+            };
+        };
+    </script>
 </body>
 </html>

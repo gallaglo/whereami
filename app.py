@@ -1,29 +1,14 @@
-# Copyright 2021 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from flask import Flask, render_template, request, Response, jsonify
 import logging
 from logging.config import dictConfig
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
-import markdown  # to format LLM output for web display
+from google import genai
+from google.genai import types
+import markdown
 import json
 import sys
 import os
 from flask_cors import CORS
 import whereami_payload
-# gRPC stuff
 from concurrent import futures
 import multiprocessing
 import grpc
@@ -31,28 +16,23 @@ from grpc_reflection.v1alpha import reflection
 from grpc_health.v1 import health
 from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
-# whereami protobufs
 import whereami_pb2
 import whereami_pb2_grpc
-# Prometheus export setup
 from prometheus_flask_exporter import PrometheusMetrics
 from py_grpc_prometheus.prometheus_server_interceptor import PromServerInterceptor
 from prometheus_client import start_http_server
-# OpenTelemetry setup
-os.environ["OTEL_PYTHON_FLASK_EXCLUDED_URLS"] = "healthz,metrics"  # set exclusions
+
+os.environ["OTEL_PYTHON_FLASK_EXCLUDED_URLS"] = "healthz,metrics"
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry import trace
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.propagators.cloud_trace_propagator import (
-    CloudTraceFormatPropagator,
-)
+from opentelemetry.propagators.cloud_trace_propagator import CloudTraceFormatPropagator
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
-# set up logging
 dictConfig({
     'version': 1,
     'formatters': {'default': {
@@ -69,177 +49,141 @@ dictConfig({
     }
 })
 
-# get host IP
-host_ip = os.getenv("HOST", "0.0.0.0") # in absence of env var, default to 0.0.0.0 (IPv4)
+host_ip = os.getenv("HOST", "0.0.0.0")
 
-# check to see if tracing enabled and sampling probability
-trace_sampling_ratio = 0  # default to not sampling if absence of environment var
+trace_sampling_ratio = 0
 if os.getenv("TRACE_SAMPLING_RATIO"):
-
     try:
         trace_sampling_ratio = float(os.getenv("TRACE_SAMPLING_RATIO"))
     except:
-        logging.warning("Invalid trace ratio provided.")  # invalid value? just keep at 0%
+        logging.warning("Invalid trace ratio provided.")
 
-# if tracing is desired, set up trace provider / exporter
 if trace_sampling_ratio > 0:
     logging.info("Attempting to enable tracing.")
-
     sampler = TraceIdRatioBased(trace_sampling_ratio)
-
-    # OTEL setup
     set_global_textmap(CloudTraceFormatPropagator())
-
     tracer_provider = TracerProvider(sampler=sampler)
     cloud_trace_exporter = CloudTraceSpanExporter()
-    tracer_provider.add_span_processor(
-        # BatchSpanProcessor buffers spans and sends them in batches in a
-        # background thread. The default parameters are sensible, but can be
-        # tweaked to optimize your performance
-        BatchSpanProcessor(cloud_trace_exporter)
-    )
+    tracer_provider.add_span_processor(BatchSpanProcessor(cloud_trace_exporter))
     trace.set_tracer_provider(tracer_provider)
-
     tracer = trace.get_tracer(__name__)
     logging.info("Tracing enabled.")
-
 else:
     logging.info("Tracing disabled.")
 
-# flask setup
 app = Flask(__name__)
 handler = logging.StreamHandler(sys.stdout)
 app.logger.addHandler(handler)
-#app.logger.propagate = True
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 FlaskInstrumentor().instrument_app(app)
-RequestsInstrumentor().instrument()  # enable tracing for Requests
-app.config['JSON_AS_ASCII'] = False  # otherwise our emojis get hosed
-CORS(app)  # enable CORS
-metrics = PrometheusMetrics(app)  # enable Prom metrics
+RequestsInstrumentor().instrument()
+app.config['JSON_AS_ASCII'] = False
+CORS(app)
+metrics = PrometheusMetrics(app)
 
-# gRPC setup
-grpc_serving_port = int(os.environ.get('PORT', 9090)) # configurable via `PORT` but default to 9090
-grpc_metrics_port = 8000  # prometheus /metrics
+grpc_serving_port = int(os.environ.get('PORT', 9090))
+grpc_metrics_port = 8000
 
-# define Whereami object
 whereami_payload = whereami_payload.WhereamiPayload()
 
-
-# create gRPC class
 class WhereamigRPC(whereami_pb2_grpc.WhereamiServicer):
-
     def GetPayload(self, request, context):
         payload = whereami_payload.build_payload(None)
         return whereami_pb2.WhereamiReply(**payload)
 
-
-# if selected will serve gRPC endpoint on port 9090
-# see https://github.com/grpc/grpc/blob/master/examples/python/xds/server.py
-# for reference on code below
 def grpc_serve():
-    # the +5 you see below re: max_workers is a hack to avoid thread starvation
-    # working on a proper workaround
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()+5),
-        interceptors=(PromServerInterceptor(),))  # interceptor for metrics
-
-    # Add the application servicer to the server.
+        interceptors=(PromServerInterceptor(),))
     whereami_pb2_grpc.add_WhereamiServicer_to_server(WhereamigRPC(), server)
-
-    # Create a health check servicer. We use the non-blocking implementation
-    # to avoid thread starvation.
     health_servicer = health.HealthServicer(
         experimental_non_blocking=True,
         experimental_thread_pool=futures.ThreadPoolExecutor(max_workers=1))
     health_pb2_grpc.add_HealthServicer_to_server(health_servicer, server)
-
-    # Create a tuple of all of the services we want to export via reflection.
     services = tuple(
         service.full_name
         for service in whereami_pb2.DESCRIPTOR.services_by_name.values()) + (
             reflection.SERVICE_NAME, health.SERVICE_NAME)
-
-    # Start an end point to expose metrics at host:$grpc_metrics_port/metrics
-    start_http_server(port=grpc_metrics_port)  # starts a flask server for metrics
-
-    # Add the reflection service to the server.
+    start_http_server(port=grpc_metrics_port)
     reflection.enable_server_reflection(services, server)
     server.add_insecure_port(host_ip + ':' + str(grpc_serving_port))
     server.start()
-
-    # Mark all services as healthy.
     overall_server_health = ""
     for service in services + (overall_server_health,):
         health_servicer.set(service, health_pb2.HealthCheckResponse.SERVING)
-
-    # Park the main application thread.
     server.wait_for_termination()
 
-# set up connection to Vertex AI
-vertexai.init(project=os.environ["PROJECT_ID"], location="us-central1")
-
-model = GenerativeModel("gemini-pro")
-
-generation_config = GenerationConfig(
-    temperature=0.3,
-    top_p=0.6,
-    candidate_count=1,
-    max_output_tokens=4096,
+client = genai.Client(
+    vertexai=True,
+    project=os.environ["PROJECT_ID"],
+    location="us-central1"
 )
 
 def _get_region(zone: str) -> str:
-    '''
-    return GCP cloud region from zone
-    '''
-    # split zone id on '-' delimeter and rejoin first two elements to derive region
-    # e.g. us-west1-c becomes us-west1
     elements = zone.split('-')
     return '-'.join(elements[:2])
 
 def _get_location_from_json_list(file_path: str, region: str) -> str:
-    '''
-    return GCP cloud region location based on region ID
-    '''
     with open(file_path, 'r') as file:
         data = json.load(file)
-    
     for item in data['regions']:
         if item.get('name') == region:
             return item.get('location')
-    
-    return None 
+    return None
 
-# HTTP heathcheck
-@app.route('/healthz')  # healthcheck endpoint
-@metrics.do_not_track()  # exclude from prom metrics
+def stream_response(prompt):
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(prompt)]
+        )
+    ]
+    
+    generate_content_config = types.GenerateContentConfig(
+        temperature=0.3,
+        top_p=0.6,
+        max_output_tokens=8192,
+        response_modalities=["TEXT"],
+        safety_settings=[
+            types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+            types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+            types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+            types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+        ]
+    )
+
+    responses = client.models.generate_content_stream(
+        model="gemini-2.0-flash-exp",
+        contents=contents,
+        config=generate_content_config
+    )
+    
+    for response in responses:
+        chunk = str(response).replace("•", "  *")
+        chunk = markdown.markdown(chunk)
+        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+
+@app.route('/healthz')
+@metrics.do_not_track()
 def i_am_healthy():
     return ('OK')
 
-
-# API endpoint
 @app.route('/api/', defaults={'path': ''})
 @app.route('/api/<path:path>')
 def api(path):
-
     payload = whereami_payload.build_payload(request.headers)
-
-    # split the path to see if user wants to read a specific field
     requested_value = path.split('/')[-1]
     if requested_value in payload.keys():
-
         return payload[requested_value]
-
     return jsonify(payload)
 
-# default route to webpage
 @app.route("/", methods=["GET", "POST"])
 def home():
-
+    if request.method == 'POST':
+        prompt = request.form['prompt']
+        return Response(stream_response(prompt), mimetype='text/event-stream')
+        
     payload = whereami_payload.build_payload(request.headers)
-
-    # retrieve and transform zone to region for GCE and GKE workloads
-    # or retrieve region directly if running on Cloud Run
     if 'region' in payload:
         region = payload['region']
     elif 'zone' in payload:
@@ -249,31 +193,17 @@ def home():
         region = None
 
     location = _get_location_from_json_list('/app/regions.json', region)
-
     message = f"Hello from {region} in {location}!"
-
     prompt = f"What is an interesting fact about {location}?"
-
-    # if user submits a prompt, generate a response from Gemini model
-    if request.method == 'POST':
-        prompt = request.form['prompt']
-        response = model.generate_content(prompt, generation_config=generation_config)
-        response_text = response.text.replace("•", "  *")
-        markdown_response = markdown.markdown(response_text)
-        return render_template('results.html', response_text=markdown_response)
-
     return render_template('index.html', message=message, default_prompt=prompt)
 
 if __name__ == '__main__':
-
-    # decision point - HTTP or gRPC?
     if os.getenv('GRPC_ENABLED') == "True":
         logging.info('gRPC server listening on port %s'%(grpc_serving_port))
         grpc_serve()
-
     else:
         app.run(
-            host=host_ip.strip('[]'), # stripping out the brackets if present
+            host=host_ip.strip('[]'),
             port=int(os.environ.get('PORT', 8080)),
             debug=True,
             threaded=True)
