@@ -124,5 +124,8 @@ spec:
               configMapKeyRef:
                 name: whereami
                 key: HOST
-# [END gke_k8s_deployment_deployment_whereami]
----
+          - name: PROJECT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: whereami
+                key: PROJECT_ID
