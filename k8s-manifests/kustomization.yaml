@@ -3,3 +3,12 @@ resources:
 - deployment.yaml
 - service.yaml
 - configmap.yaml
+
+vars:
+- name: PROJECT_ID
+  objref:
+    kind: ServiceAccount
+    name: whereami
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.annotations.iam.gke.io/gcp-service-account
