@@ -147,7 +147,7 @@ def _get_location_from_json_list(file_path: str, region: str) -> str:
 def stream_response(prompt):
     logging.info(f"Starting stream_response with prompt: {prompt}")
     try:
-        contents = [types.Content(role="user", parts=[types.Part.from_text(prompt)])]
+        contents = [types.Content(role="user", parts=[{"text": prompt}])]
         responses = client.models.generate_content_stream(
             model="gemini-2.0-flash-exp",
             contents=contents,
