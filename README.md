@@ -74,7 +74,7 @@ gcloud run deploy whereami \
 export CLUSTER_NAME=<your-cluster>
 export NAMESPACE=<your-namespace>
 export PROJECT_ID=<your-project-id>
-export IMAGE_REGISTRY=us-docker.pkg.dev
+export REGION=<your-region>
 export IMAGE_TAG=latest
 
 # Bind KSA to GCP SA

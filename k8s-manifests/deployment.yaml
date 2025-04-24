@@ -46,7 +46,7 @@ spec:
               - all
           privileged: false
           readOnlyRootFilesystem: true
-        image: ${IMAGE_REGISTRY}/${PROJECT_ID}/whereami:${IMAGE_TAG}
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami:${IMAGE_TAG}
         resources:
           requests:
             memory: "512Mi"
