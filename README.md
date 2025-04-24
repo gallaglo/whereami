@@ -73,6 +73,9 @@ gcloud run deploy whereami \
 # Set cluster details
 export CLUSTER_NAME=<your-cluster>
 export NAMESPACE=<your-namespace>
+export PROJECT_ID=<your-project-id>
+export REGION=<your-region>
+export IMAGE_TAG=latest
 
 # Bind KSA to GCP SA
 gcloud iam service-accounts add-iam-policy-binding ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
@@ -82,8 +85,11 @@ gcloud iam service-accounts add-iam-policy-binding ${SA_NAME}@${PROJECT_ID}.iam.
 # Get cluster credentials
 gcloud container clusters get-credentials ${CLUSTER_NAME} --region ${REGION} --project ${PROJECT_ID}
 
+# Navigate to /k8s-manifests
+cd k8s-manifests
+
 # Apply manifests with kustomize
-kustomize build . | PROJECT_ID=${PROJECT_ID} envsubst | kubectl apply -f - -n ${NAMESPACE}
+kustomize build . | envsubst | kubectl apply -f - -n ${NAMESPACE}
 ```
 
 ## Repository Structure
