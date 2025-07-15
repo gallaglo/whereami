@@ -4,6 +4,15 @@ import json
 import markdown
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_google_vertexai import ChatVertexAI
+from langchain_core.pydantic_v1 import BaseModel, Field
+from typing import Optional, List
+
+class ChatResponse(BaseModel):
+    """Structured response model for chat responses"""
+    content: str = Field(description="The main response content")
+    sections: Optional[List[str]] = Field(default=None, description="List of content sections if applicable")
+    is_technical: bool = Field(default=False, description="Whether this is a technical/GCP-focused response")
+    location_mentioned: Optional[str] = Field(default=None, description="City/location mentioned in the query")
 
 class ChatService:
     def __init__(self):
@@ -16,6 +25,9 @@ class ChatService:
             top_p=0.6,
             max_output_tokens=8192
         ).bind_tools([{"google_search": {}}])
+        
+        # Create structured output version for consistent formatting
+        self.structured_llm = self.langchain_llm.with_structured_output(ChatResponse)
         
         # Define system message template for GCP/cloud regions focus
         system_template = """You are a helpful AI assistant specialized in Google Cloud Platform (GCP) and cloud computing topics, with a particular focus on cloud regions, zones, and geographic distribution of cloud services.
@@ -66,6 +78,12 @@ Response approach:
 - For topics completely unrelated to geography or technology: Politely redirect with: "That's an interesting question! While I'm specialized in GCP and cloud infrastructure, I'd love to help you explore cloud regions, GCP services, or deployment strategies instead."
 
 IMPORTANT: Only include weather information when users are asking about cities/locations from a geographical or cultural perspective, not when asking technical questions about GCP regions.
+
+RESPONSE FORMAT: You must respond with structured content that includes:
+- content: The main response text with proper markdown formatting
+- sections: List any major sections if your response has multiple parts
+- is_technical: Set to true for GCP/cloud technical questions, false for geographical/cultural questions
+- location_mentioned: The city/location name if the user is asking about a specific place
 """
 
         # Create the prompt template
@@ -96,14 +114,19 @@ IMPORTANT: Only include weather information when users are asking about cities/l
                 user_message=prompt
             )
             
-            # Use LangChain with tool calling for grounding
-            response = self.langchain_llm.invoke(formatted_prompt)
-            
-            # Extract the final response content
-            if hasattr(response, 'content'):
-                full_response = response.content
-            else:
-                full_response = str(response)
+            # Use structured LangChain output for consistent formatting
+            try:
+                structured_response = self.structured_llm.invoke(formatted_prompt)
+                full_response = structured_response.content
+                logging.info(f"Structured response - Technical: {structured_response.is_technical}, Location: {structured_response.location_mentioned}")
+            except Exception as struct_error:
+                logging.warning(f"Structured output failed, falling back to regular response: {struct_error}")
+                # Fallback to regular response
+                response = self.langchain_llm.invoke(formatted_prompt)
+                if hasattr(response, 'content'):
+                    full_response = response.content
+                else:
+                    full_response = str(response)
             
             # Ensure full_response is a string (handle case where it might be a list)
             if isinstance(full_response, list):
@@ -114,8 +137,27 @@ IMPORTANT: Only include weather information when users are asking about cities/l
             # Clean up citations and improve formatting
             full_response = full_response.replace("[my knowledge]", "")
             
+            # Improve list formatting
+            # Convert "* " at start of lines to proper markdown
+            lines = full_response.split('\n')
+            formatted_lines = []
+            for line in lines:
+                # Handle bullet points that start with "* "
+                if line.strip().startswith('* '):
+                    formatted_lines.append(line)
+                # Handle bullet points that start with "•"
+                elif line.strip().startswith('•'):
+                    formatted_lines.append(line.replace('•', '*'))
+                # Add proper spacing for list items if they don't have it
+                elif line.strip() and not line.startswith(' ') and any(prev_line.strip().startswith(('*', '-')) for prev_line in formatted_lines[-1:] if prev_line.strip()):
+                    formatted_lines.append(f"* {line.strip()}")
+                else:
+                    formatted_lines.append(line)
+            
+            full_response = '\n'.join(formatted_lines)
+            
             # Format the response with markdown
-            formatted_text = markdown.markdown(full_response.replace("•", "*"))
+            formatted_text = markdown.markdown(full_response)
             return formatted_text
             
         except Exception as e:
