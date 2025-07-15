@@ -19,3 +19,5 @@ opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-requests
 six
 google-genai>=0.3.2
+langchain>=0.1.0
+langchain-google-vertexai>=2.0.11
