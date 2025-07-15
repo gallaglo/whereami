@@ -106,6 +106,12 @@ IMPORTANT: Questions about cities, places, or locations should ALWAYS be answere
             else:
                 full_response = str(response)
             
+            # Ensure full_response is a string (handle case where it might be a list)
+            if isinstance(full_response, list):
+                full_response = ' '.join(str(item) for item in full_response)
+            elif not isinstance(full_response, str):
+                full_response = str(full_response)
+            
             # Format the response with markdown
             formatted_text = markdown.markdown(full_response.replace("•", "*"))
             return formatted_text
