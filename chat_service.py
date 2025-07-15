@@ -117,8 +117,14 @@ RESPONSE FORMAT: You must respond with structured content that includes:
             # Use structured LangChain output for consistent formatting
             try:
                 structured_response = self.structured_llm.invoke(formatted_prompt)
-                full_response = structured_response.content
-                logging.info(f"Structured response - Technical: {structured_response.is_technical}, Location: {structured_response.location_mentioned}")
+                # Extract just the content field from the structured response
+                if hasattr(structured_response, 'content') and structured_response.content:
+                    full_response = structured_response.content
+                    logging.info(f"Structured response - Technical: {structured_response.is_technical}, Location: {structured_response.location_mentioned}")
+                else:
+                    # Handle case where structured response doesn't have expected content
+                    full_response = str(structured_response)
+                    logging.warning(f"Structured response missing content field: {structured_response}")
             except Exception as struct_error:
                 logging.warning(f"Structured output failed, falling back to regular response: {struct_error}")
                 # Fallback to regular response
