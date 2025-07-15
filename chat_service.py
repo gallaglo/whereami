@@ -9,7 +9,7 @@ class ChatService:
     def __init__(self):
         # Initialize LangChain ChatVertexAI model with built-in Google Search
         self.langchain_llm = ChatVertexAI(
-            model="gemini-2.0-flash-001",
+            model="gemini-2.5-flash",
             project=os.environ["PROJECT_ID"],
             location="us-central1",
             temperature=0.3,
@@ -58,15 +58,14 @@ Guidelines:
 13. When users ask about specific cities different from the deployment location, focus on THOSE cities, not the deployment location
 
 Response approach:
-- For questions about cities, locations, places, or geographical areas (like "What is an interesting fact about [city]?"): 
+- For questions specifically about cities, locations, places, or geographical areas as places to visit or learn about (like "What is an interesting fact about [city]?"): 
   1. First share fascinating local facts about culture, history, geography, or notable features
   2. Include the current temperature and weather conditions for that city (always search for this)
   3. Then gently connect to cloud infrastructure by mentioning how the region benefits cloud deployments
+- For technical questions about GCP regions (like "Tell me more about us-west1"): Focus on technical details, availability, services, and cloud infrastructure without including weather information
 - For topics completely unrelated to geography or technology: Politely redirect with: "That's an interesting question! While I'm specialized in GCP and cloud infrastructure, I'd love to help you explore cloud regions, GCP services, or deployment strategies instead."
 
-IMPORTANT: Whenever a user asks about ANY city or location, always include the current temperature and weather conditions as part of your response.
-
-IMPORTANT: Questions about cities, places, or locations should ALWAYS be answered with interesting local facts first, then connected to cloud topics.
+IMPORTANT: Only include weather information when users are asking about cities/locations from a geographical or cultural perspective, not when asking technical questions about GCP regions.
 """
 
         # Create the prompt template
@@ -111,6 +110,9 @@ IMPORTANT: Questions about cities, places, or locations should ALWAYS be answere
                 full_response = ' '.join(str(item) for item in full_response)
             elif not isinstance(full_response, str):
                 full_response = str(full_response)
+            
+            # Clean up citations and improve formatting
+            full_response = full_response.replace("[my knowledge]", "")
             
             # Format the response with markdown
             formatted_text = markdown.markdown(full_response.replace("•", "*"))
