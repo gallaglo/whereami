@@ -8,6 +8,7 @@ import json
 import sys
 import os
 from flask_cors import CORS
+from chat_service import ChatService
 import whereami_payload
 from concurrent import futures
 import multiprocessing
@@ -132,6 +133,9 @@ generate_content_config = types.GenerateContentConfig(
     ]
 )
 
+# Initialize ChatService for LangChain/Gemini integration
+chat_service = ChatService()
+
 def _get_region(zone: str) -> str:
     elements = zone.split('-')
     return '-'.join(elements[:2])
@@ -144,27 +148,6 @@ def _get_location_from_json_list(file_path: str, region: str) -> str:
             return item.get('location')
     return None
 
-def stream_response(prompt):
-    logging.info(f"Starting stream_response with prompt: {prompt}")
-    try:
-        contents = [types.Content(role="user", parts=[{"text": prompt}])]
-        responses = client.models.generate_content_stream(
-            model="gemini-2.0-flash-exp",
-            contents=contents,
-            config=generate_content_config
-        )
-        
-        full_response = ""
-        for response in responses:
-            text = response.candidates[0].content.parts[0].text
-            full_response += text
-            
-        formatted_text = markdown.markdown(full_response.replace("•", "*"))
-        yield f"data: {json.dumps({'chunk': formatted_text})}\n\n"
-            
-    except Exception as e:
-        logging.error(f"Error in stream_response: {str(e)}", exc_info=True)
-        yield f"data: {json.dumps({'chunk': f'Error: {str(e)}'})}\n\n"
 
 @app.route('/healthz')
 @metrics.do_not_track()
@@ -185,14 +168,25 @@ def generate():
     prompt = request.args.get('prompt')
     if not prompt:
         return jsonify({'error': 'No prompt provided'}), 400
-    return Response(stream_response(prompt), mimetype='text/event-stream')
+    
+    # Get current deployment context
+    payload = whereami_payload.build_payload(request.headers)
+    if 'region' in payload:
+        region = payload['region']
+    elif 'zone' in payload:
+        region = _get_region(payload['zone'])
+    else:
+        region = "unknown"
+    
+    location = _get_location_from_json_list('/app/regions.json', region) or "unknown location"
+    
+    return Response(chat_service.stream_response(prompt, region, location), mimetype='text/event-stream')
 
 @app.route("/", methods=["GET"])
 def home():
     prompt = request.args.get('prompt')
-    if prompt:
-        return Response(stream_response(prompt), mimetype='text/event-stream')
-        
+    
+    # Get current deployment context
     payload = whereami_payload.build_payload(request.headers)
     if 'region' in payload:
         region = payload['region']
@@ -200,12 +194,16 @@ def home():
         region = _get_region(payload['zone'])
     else:
         logging.warning("Region cannot be located.")
-        region = None
+        region = "unknown"
 
-    location = _get_location_from_json_list('/app/regions.json', region)
+    location = _get_location_from_json_list('/app/regions.json', region) or "unknown location"
+    
+    if prompt:
+        return Response(chat_service.stream_response(prompt, region, location), mimetype='text/event-stream')
+    
     message = f"Hello from {region} in {location}!"
-    prompt = f"What is an interesting fact about {location}?"
-    return render_template('index.html', message=message, default_prompt=prompt)
+    default_prompt = f"What is an interesting fact about {location}?"
+    return render_template('index.html', message=message, default_prompt=default_prompt)
 
 if __name__ == '__main__':
     if os.getenv('GRPC_ENABLED') == "True":
