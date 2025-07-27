@@ -3,6 +3,7 @@
 A containerized application that displays environmental details about its cloud runtime environment and provides an intelligent chat interface powered by Gemini AI. The app can be deployed on Google Cloud Platform services like Cloud Run or Google Kubernetes Engine (GKE).
 
 Key features:
+
 - **Interactive Chat Interface** - Chat with an AI assistant specialized in GCP and cloud infrastructure
 - **Agentic Tool Integration** - Real-time access to GCP region data, weather information, and web search
 - **Environment Detection** - Displays region, zone and cluster information of the runtime environment
@@ -13,6 +14,7 @@ Key features:
 ## Chat Features
 
 The application includes an intelligent chat interface that can:
+
 - Answer questions about GCP regions, zones, and cloud services
 - Provide real-time weather information for any location
 - Search the web for current information about cloud infrastructure
@@ -52,7 +54,9 @@ gcloud auth configure-docker ${REGION}-docker.pkg.dev
 docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest .
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest
 ```
+
 ### Create GCP IAM Service Account
+
 ```bash
 export SA_NAME=whereami-sa
 
@@ -64,9 +68,16 @@ gcloud iam service-accounts create ${SA_NAME} \
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/aiplatform.user"
+
+# Grant GCE Viewer role
+gcloud projects add-iam-policy-binding ${PROJECT_ID}   --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"   --role="roles/compute.viewer"
+
+# Grant Service Usage Viewer role
+gcloud projects add-iam-policy-binding ${PROJECT_ID}   --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"   --role="roles/serviceusage.serviceUsageViewer"
 ```
 
 ### Deploy to Cloud Run
+
 ```bash
 gcloud run deploy whereami \
   --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/whereami-app/whereami:latest \
@@ -75,6 +86,7 @@ gcloud run deploy whereami \
   --project ${PROJECT_ID} \
   --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
   --allow-unauthenticated \
+  --memory 1Gi \
   --set-env-vars PROJECT_ID=${PROJECT_ID} \
   --set-env-vars OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}  # Optional for weather features
   ```
@@ -116,6 +128,7 @@ docker build --env GOOGLE_ACCESS_TOKEN=$(gcloud auth print-access-token) --env P
 ```
 
 This command:
+
 - Sets up authentication using your local gcloud credentials
 - Configures the project ID for testing
 - Builds only to the test stage to run the test suite
