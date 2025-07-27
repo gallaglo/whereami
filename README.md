@@ -1,11 +1,23 @@
 # whereami
 
-A containerized application that displays environmental details about its cloud runtime environment. The app can be deployed on Google Cloud Platform services like Cloud Run or Google Kubernetes Engine (GKE).
+A containerized application that displays environmental details about its cloud runtime environment and provides an intelligent chat interface powered by Gemini AI. The app can be deployed on Google Cloud Platform services like Cloud Run or Google Kubernetes Engine (GKE).
 
 Key features:
-- Displays region, zone and cluster information 
-- Integrates with Gemini API to provide interesting facts about the cloud region's location
+- **Interactive Chat Interface** - Chat with an AI assistant specialized in GCP and cloud infrastructure
+- **Agentic Tool Integration** - Real-time access to GCP region data, weather information, and web search
+- **Environment Detection** - Displays region, zone and cluster information of the runtime environment
+- **Streaming Responses** - Real-time chat responses using server-sent events
+- **LangChain Integration** - Powered by Gemini 2.5 Flash with structured output and tool calling
 - Production-ready container image used in other projects like [Multi-region Cloud Run Deployment](https://github.com/gallaglo/gcp-demos-notes-and-tricks/tree/main/run/multi-region)
+
+## Chat Features
+
+The application includes an intelligent chat interface that can:
+- Answer questions about GCP regions, zones, and cloud services
+- Provide real-time weather information for any location
+- Search the web for current information about cloud infrastructure
+- Give recommendations for cloud deployment strategies
+- Explain GCP services and their availability across regions
 
 > This repo is a fork of the GCP [whereami](https://github.com/GoogleCloudPlatform/kubernetes-engine-samples/tree/main/quickstarts/whereami) project. I have extended application functionality to serve a webpage with information about the runtime environment.
 
@@ -14,6 +26,7 @@ Key features:
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 - [Docker](https://docs.docker.com/get-docker/)
 - Active Google Cloud Project
+- (Optional) [OpenWeather API Key](https://openweathermap.org/api) for weather tool functionality
 
 ## Setup Instructions
 
@@ -62,7 +75,8 @@ gcloud run deploy whereami \
   --project ${PROJECT_ID} \
   --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
   --allow-unauthenticated \
-  --set-env-vars PROJECT_ID=${PROJECT_ID}
+  --set-env-vars PROJECT_ID=${PROJECT_ID} \
+  --set-env-vars OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}  # Optional for weather features
   ```
 
 ### Deploy to GKE
@@ -91,6 +105,21 @@ cd k8s-manifests
 # Apply manifests with kustomize
 kustomize build . | envsubst | kubectl apply -f - -n ${NAMESPACE}
 ```
+
+## Local Development
+
+For local development and testing, you can run the application tests during the Docker build process:
+
+```bash
+# Run tests during Docker build
+docker build --env GOOGLE_ACCESS_TOKEN=$(gcloud auth print-access-token) --env PROJECT_ID=logan-gallagher --target test -t whereami .
+```
+
+This command:
+- Sets up authentication using your local gcloud credentials
+- Configures the project ID for testing
+- Builds only to the test stage to run the test suite
+- Creates a test image tagged as `whereami`
 
 ## Repository Structure
 

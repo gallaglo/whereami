@@ -6,6 +6,8 @@ from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, H
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.pydantic_v1 import BaseModel, Field
 from typing import Optional, List
+from gcp_tools import get_gcp_region_info, list_gcp_regions, get_gcp_services_in_region
+from weather_tools import get_current_weather, get_weather_forecast
 
 class ChatResponse(BaseModel):
     """Structured response model for chat responses"""
@@ -16,7 +18,17 @@ class ChatResponse(BaseModel):
 
 class ChatService:
     def __init__(self):
-        # Initialize LangChain ChatVertexAI model with built-in Google Search
+        # Define available tools
+        self.tools = [
+            {"google_search": {}},
+            get_gcp_region_info,
+            list_gcp_regions,
+            get_gcp_services_in_region,
+            get_current_weather,
+            get_weather_forecast
+        ]
+        
+        # Initialize LangChain ChatVertexAI model with all tools
         self.langchain_llm = ChatVertexAI(
             model="gemini-2.5-flash",
             project=os.environ["PROJECT_ID"],
@@ -24,7 +36,7 @@ class ChatService:
             temperature=0.3,
             top_p=0.6,
             max_output_tokens=8192
-        ).bind_tools([{"google_search": {}}])
+        ).bind_tools(self.tools)
         
         # Create structured output version for consistent formatting
         self.structured_llm = self.langchain_llm.with_structured_output(ChatResponse)
@@ -40,6 +52,18 @@ Your role is to provide accurate, helpful information about:
 - Multi-region and global cloud architectures
 - GCP services availability across different regions
 - Data residency and compliance considerations
+- Current weather conditions for cloud region locations
+
+AVAILABLE TOOLS:
+You have access to the following specialized tools that you should use when appropriate:
+- google_search: For general web searches and current information
+- get_gcp_region_info: Get detailed information about a specific GCP region including zones and quotas
+- list_gcp_regions: List all available GCP regions with basic information  
+- get_gcp_services_in_region: Get information about GCP services available in a specific region
+- get_current_weather: Get current weather information for any location
+- get_weather_forecast: Get weather forecast for any location (1-5 days)
+
+USE THESE TOOLS ACTIVELY: When users ask about GCP regions, cloud services, or weather in specific locations, use the appropriate tools to get accurate, real-time information rather than relying only on your training data.
 
 IMPORTANT DISTINCTION:
 - Google DATA CENTERS: Physical facilities where Google operates servers (like The Dalles, Council Bluffs)
