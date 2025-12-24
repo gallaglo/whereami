@@ -179,7 +179,7 @@ def generate():
         region = "unknown"
     
     location = _get_location_from_json_list('/app/regions.json', region) or "unknown location"
-    
+
     return Response(chat_service.stream_response(prompt, region, location), mimetype='text/event-stream')
 
 @app.route("/", methods=["GET"])
@@ -197,7 +197,7 @@ def home():
         region = "unknown"
 
     location = _get_location_from_json_list('/app/regions.json', region) or "unknown location"
-    
+
     if prompt:
         return Response(chat_service.stream_response(prompt, region, location), mimetype='text/event-stream')
     

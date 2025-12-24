@@ -219,7 +219,14 @@ RESPONSE FORMAT: You must respond with structured content that includes:
                 full_response,
                 extensions=['nl2br', 'sane_lists']
             )
-            return formatted_text
+
+            # Add CSS styling for proper list indentation
+            styled_text = f'<div style="margin-left: 0;">{formatted_text}</div>'
+            # Ensure lists have proper indentation
+            styled_text = styled_text.replace('<ul>', '<ul style="margin-left: 20px; padding-left: 20px;">')
+            styled_text = styled_text.replace('<ol>', '<ol style="margin-left: 20px; padding-left: 20px;">')
+
+            return styled_text
             
         except Exception as e:
             logging.error(f"Error in ChatService.generate_response: {str(e)}", exc_info=True)

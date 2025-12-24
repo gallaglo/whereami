@@ -86,9 +86,17 @@ gcloud run deploy whereami \
   --project ${PROJECT_ID} \
   --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
   --allow-unauthenticated \
-  --memory 1Gi \
+  --memory 2Gi \
+  --cpu 2 \
+  --cpu-boost \
   --set-env-vars PROJECT_ID=${PROJECT_ID}
 ```
+
+**Performance Notes:**
+
+- `--cpu-boost` enables extra CPU during startup to reduce cold start time (~8-12 seconds)
+- `--cpu 2` provides better performance for LangChain/Gemini processing
+- `--memory 2Gi` ensures sufficient headroom for Python dependencies
 
 ### Deploy to GKE
 
