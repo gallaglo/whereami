@@ -1,5 +1,5 @@
 # Builder stage - install dependencies and copy source code
-FROM python:3.12.1-slim AS builder
+FROM --platform=linux/amd64 python:3.12.1-slim AS builder
 
 WORKDIR /app
 
