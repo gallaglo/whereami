@@ -20,6 +20,7 @@ opentelemetry-instrumentation-requests
 six
 google-genai>=0.3.2
 langchain>=0.1.0
+langchain-core
 langchain-google-vertexai>=2.0.11
 google-cloud-compute>=1.19.0
 google-cloud-resource-manager>=1.12.0
