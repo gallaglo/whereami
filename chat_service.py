@@ -4,10 +4,11 @@ import json
 import markdown
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_google_vertexai import ChatVertexAI
+from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import WikipediaAPIWrapper
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from gcp_tools import get_gcp_region_info, list_gcp_regions, get_gcp_services_in_region
-from weather_tools import get_current_weather, get_weather_forecast
 
 class ChatResponse(BaseModel):
     """Structured response model for chat responses"""
@@ -18,31 +19,46 @@ class ChatResponse(BaseModel):
 
 class ChatService:
     def __init__(self):
-        # Define available tools
-        self.tools = [
-            {"google_search": {}},
+        # Initialize Wikipedia tool
+        wikipedia = WikipediaQueryRun(
+            api_wrapper=WikipediaAPIWrapper(
+                top_k_results=2,
+                doc_content_chars_max=4000
+            )
+        )
+
+        # Define available function tools
+        self.function_tools = [
+            wikipedia,
             get_gcp_region_info,
             list_gcp_regions,
-            get_gcp_services_in_region,
-            get_current_weather,
-            get_weather_forecast
+            get_gcp_services_in_region
         ]
-        
-        # Initialize LangChain ChatVertexAI model with all tools
-        self.langchain_llm = ChatVertexAI(
-            model="gemini-2.5-flash",
+
+        # Configure thinking budget for complex reasoning
+        # Set to 0 for simple queries (low latency), or higher for complex reasoning
+        self.default_thinking_budget = 1024
+
+        # Initialize LangChain ChatVertexAI model with function tools
+        # Note: Google Search is configured separately to avoid tool_type conflict
+        # Gemini 3 Flash preview requires location="global"
+        base_model = ChatVertexAI(
+            model="gemini-3-flash-preview",
             project=os.environ["PROJECT_ID"],
-            location="us-central1",
+            location="global",
             temperature=0.3,
             top_p=0.6,
             max_output_tokens=8192
-        ).bind_tools(self.tools)
-        
+        )
+
+        # Bind tools separately - first Google Search, then function tools
+        self.langchain_llm = base_model.bind(tools=[{"google_search": {}}]).bind_tools(self.function_tools)
+
         # Create structured output version for consistent formatting
         self.structured_llm = self.langchain_llm.with_structured_output(ChatResponse)
         
         # Define system message template for GCP/cloud regions focus
-        system_template = """You are a helpful AI assistant specialized in Google Cloud Platform (GCP) and cloud computing topics, with a particular focus on cloud regions, zones, and geographic distribution of cloud services.
+        system_template = """You are a helpful AI assistant powered by Gemini 3 Flash, specialized in Google Cloud Platform (GCP) and cloud computing topics, with a particular focus on cloud regions, zones, and geographic distribution of cloud services.
 
 Your role is to provide accurate, helpful information about:
 - GCP regions, zones, and availability zones
@@ -52,18 +68,17 @@ Your role is to provide accurate, helpful information about:
 - Multi-region and global cloud architectures
 - GCP services availability across different regions
 - Data residency and compliance considerations
-- Current weather conditions for cloud region locations
+- Geographic locations, their history, culture, and current conditions (weather, events, etc.)
 
 AVAILABLE TOOLS:
 You have access to the following specialized tools that you should use when appropriate:
-- google_search: For general web searches and current information
+- google_search: For general web searches, current information, real-time data (weather, events, news), and factual verification
+- wikipedia: For detailed encyclopedic information about locations, history, geography, and general knowledge
 - get_gcp_region_info: Get detailed information about a specific GCP region including zones and quotas
-- list_gcp_regions: List all available GCP regions with basic information  
+- list_gcp_regions: List all available GCP regions with basic information
 - get_gcp_services_in_region: Get information about GCP services available in a specific region
-- get_current_weather: Get current weather information for any location
-- get_weather_forecast: Get weather forecast for any location (1-5 days)
 
-USE THESE TOOLS ACTIVELY: When users ask about GCP regions, cloud services, or weather in specific locations, use the appropriate tools to get accurate, real-time information rather than relying only on your training data.
+USE THESE TOOLS ACTIVELY: When users ask about GCP regions, cloud services, locations, weather, or current events, use the appropriate tools to get accurate, real-time information rather than relying only on your training data. For weather information, use Google Search. For historical or encyclopedic information about places, use Wikipedia.
 
 IMPORTANT DISTINCTION:
 - Google DATA CENTERS: Physical facilities where Google operates servers (like The Dalles, Council Bluffs)
@@ -90,8 +105,9 @@ Guidelines:
 9. For questions like "Is there a GCP region in [location]?" or "Are there data centers in [location]?", search before answering
 10. Be precise: distinguish between Google data centers (physical facilities) and GCP regions (customer service areas)
 11. When discussing Google facilities, clarify: "Google operates a data center in [location], but this is not the same as a GCP region available to customers"
-12. For current/real-time information (weather, temperature, current events), always use Google Search
-13. When users ask about specific cities different from the deployment location, focus on THOSE cities, not the deployment location
+12. For current/real-time information (weather, temperature, current events), ALWAYS use Google Search
+13. For historical, encyclopedic, or general knowledge about locations, use Wikipedia
+14. When users ask about specific cities different from the deployment location, focus on THOSE cities, not the deployment location
 
 Response approach:
 - For questions specifically about cities, locations, places, or geographical areas as places to visit or learn about (like "What is an interesting fact about [city]?"): 
@@ -166,28 +182,43 @@ RESPONSE FORMAT: You must respond with structured content that includes:
             
             # Clean up citations and improve formatting
             full_response = full_response.replace("[my knowledge]", "")
-            
-            # Improve list formatting
-            # Convert "* " at start of lines to proper markdown
+
+            # Improve list formatting - ensure proper spacing for markdown lists
             lines = full_response.split('\n')
             formatted_lines = []
-            for line in lines:
-                # Handle bullet points that start with "* "
-                if line.strip().startswith('* '):
-                    formatted_lines.append(line)
-                # Handle bullet points that start with "•"
-                elif line.strip().startswith('•'):
-                    formatted_lines.append(line.replace('•', '*'))
-                # Add proper spacing for list items if they don't have it
-                elif line.strip() and not line.startswith(' ') and any(prev_line.strip().startswith(('*', '-')) for prev_line in formatted_lines[-1:] if prev_line.strip()):
-                    formatted_lines.append(f"* {line.strip()}")
+            in_list = False
+
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+
+                # Check if this line is a bullet point
+                is_bullet = stripped.startswith('* ') or stripped.startswith('- ') or stripped.startswith('•')
+
+                # If starting a new list, add blank line before it (unless it's the first line)
+                if is_bullet and not in_list and formatted_lines and formatted_lines[-1].strip():
+                    formatted_lines.append('')
+                    in_list = True
+                elif not is_bullet and in_list and stripped:
+                    # Ending a list
+                    in_list = False
+                    if formatted_lines and formatted_lines[-1].strip():
+                        formatted_lines.append('')
+
+                # Normalize bullet points to use "* "
+                if stripped.startswith('•'):
+                    formatted_lines.append(stripped.replace('•', '*', 1))
+                elif is_bullet:
+                    formatted_lines.append(stripped)
                 else:
                     formatted_lines.append(line)
-            
+
             full_response = '\n'.join(formatted_lines)
-            
-            # Format the response with markdown
-            formatted_text = markdown.markdown(full_response)
+
+            # Format the response with markdown, using extensions for better list handling
+            formatted_text = markdown.markdown(
+                full_response,
+                extensions=['nl2br', 'sane_lists']
+            )
             return formatted_text
             
         except Exception as e:
