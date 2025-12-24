@@ -17,7 +17,6 @@ RUN uv pip install --no-cache -r requirements.txt
 COPY app.py ./
 COPY chat_service.py ./
 COPY gcp_tools.py ./
-COPY weather_tools.py ./
 COPY whereami_pb2.py ./
 COPY whereami_pb2_grpc.py ./
 COPY whereami_payload.py ./

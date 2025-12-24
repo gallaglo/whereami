@@ -5,10 +5,10 @@ A containerized application that displays environmental details about its cloud 
 Key features:
 
 - **Interactive Chat Interface** - Chat with an AI assistant specialized in GCP and cloud infrastructure
-- **Agentic Tool Integration** - Real-time access to GCP region data, weather information, and web search
+- **Agentic Tool Integration** - Real-time access to GCP region data, Google Search, and Wikipedia
 - **Environment Detection** - Displays region, zone and cluster information of the runtime environment
 - **Streaming Responses** - Real-time chat responses using server-sent events
-- **LangChain Integration** - Powered by Gemini 2.5 Flash with structured output and tool calling
+- **LangChain Integration** - Powered by Gemini 3 Flash with structured output and tool calling
 - Production-ready container image used in other projects like [Multi-region Cloud Run Deployment](https://github.com/gallaglo/gcp-demos-notes-and-tricks/tree/main/run/multi-region)
 
 ## Chat Features
@@ -16,7 +16,8 @@ Key features:
 The application includes an intelligent chat interface that can:
 
 - Answer questions about GCP regions, zones, and cloud services
-- Provide real-time weather information for any location
+- Provide real-time information (weather, events, news) via Google Search
+- Access encyclopedic knowledge about locations and topics via Wikipedia
 - Search the web for current information about cloud infrastructure
 - Give recommendations for cloud deployment strategies
 - Explain GCP services and their availability across regions
@@ -27,14 +28,13 @@ The application includes an intelligent chat interface that can:
 
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 - [Docker](https://docs.docker.com/get-docker/)
-- Active Google Cloud Project
-- (Optional) [OpenWeather API Key](https://openweathermap.org/api) for weather tool functionality
+- Active Google Cloud Project with Vertex AI API enabled
 
 ## Setup Instructions
 
 Deploy the app on either Cloud Run (serverless) or GKE (Kubernetes). Instructions for both platforms are provided below.
 
-### Build and push to Artifact Registry:
+### Build and push to Artifact Registry
 
 ```bash
 # Set project and region
@@ -86,10 +86,17 @@ gcloud run deploy whereami \
   --project ${PROJECT_ID} \
   --service-account ${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
   --allow-unauthenticated \
-  --memory 1Gi \
-  --set-env-vars PROJECT_ID=${PROJECT_ID} \
-  --set-env-vars OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}  # Optional for weather features
-  ```
+  --memory 2Gi \
+  --cpu 2 \
+  --cpu-boost \
+  --set-env-vars PROJECT_ID=${PROJECT_ID}
+```
+
+**Performance Notes:**
+
+- `--cpu-boost` enables extra CPU during startup to reduce cold start time (~8-12 seconds)
+- `--cpu 2` provides better performance for LangChain/Gemini processing
+- `--memory 2Gi` ensures sufficient headroom for Python dependencies
 
 ### Deploy to GKE
 
@@ -145,4 +152,4 @@ This command:
 
 ## TODO
 
-* Publish image to [GH Packages and Docker Hub](https://docs.github.com/en/actions/use-cases-and-examples/publishing-packages/publishing-docker-images#publishing-images-to-github-packages)
+- Publish image to [GH Packages and Docker Hub](https://docs.github.com/en/actions/use-cases-and-examples/publishing-packages/publishing-docker-images#publishing-images-to-github-packages)
