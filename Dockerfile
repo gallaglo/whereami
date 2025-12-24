@@ -1,11 +1,17 @@
 # Builder stage - install dependencies and copy source code
-FROM python:3.12.1-slim AS builder
+FROM --platform=linux/amd64 python:3.12.1-slim AS builder
 
 WORKDIR /app
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Enable system Python for uv
+ENV UV_SYSTEM_PYTHON=1
+
 # Copy requirements and install dependencies
 COPY requirements.txt ./
-RUN pip install -r requirements.txt
+RUN uv pip install --no-cache -r requirements.txt
 
 # Copy all source code
 COPY app.py ./

@@ -2,9 +2,9 @@ import logging
 import os
 import json
 import markdown
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_google_vertexai import ChatVertexAI
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from gcp_tools import get_gcp_region_info, list_gcp_regions, get_gcp_services_in_region
 from weather_tools import get_current_weather, get_weather_forecast
