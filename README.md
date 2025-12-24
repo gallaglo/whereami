@@ -34,7 +34,7 @@ The application includes an intelligent chat interface that can:
 
 Deploy the app on either Cloud Run (serverless) or GKE (Kubernetes). Instructions for both platforms are provided below.
 
-### Build and push to Artifact Registry:
+### Build and push to Artifact Registry
 
 ```bash
 # Set project and region
@@ -152,4 +152,4 @@ This command:
 
 ## TODO
 
-* Publish image to [GH Packages and Docker Hub](https://docs.github.com/en/actions/use-cases-and-examples/publishing-packages/publishing-docker-images#publishing-images-to-github-packages)
+- Publish image to [GH Packages and Docker Hub](https://docs.github.com/en/actions/use-cases-and-examples/publishing-packages/publishing-docker-images#publishing-images-to-github-packages)
